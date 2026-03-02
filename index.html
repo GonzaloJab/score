@@ -4,9 +4,9 @@
   <title>Puntuaciones Semana Grande</title>
   <style>
     :root {
-      --nick-color: #ff7000; /* Naranja oficial Nickelodeon */
-      --disney-color: #0066cc;
-      --boing-color: #e60000;
+      --nick-color: #d9ff00; /* Naranja oficial Nickelodeon */
+      --disney-color: #dae7eb;
+      --boing-color: #00a9e6;
     }
 
     body { 
@@ -157,8 +157,7 @@
   </div>
 
   <script>
-    // REEMPLAZA ESTO CON TUS DATOS DE JSONBIN
-    const BIN_ID = '69a5e86dae596e708f58addb';
+    const BIN_ID = '69a5f99543b1c97be9ad05b6';
     const API_KEY = '$2a$10$2pn4Eg1A.geyU64ug/kX4O2iAhPUcsdujbMVEMkeZI75kELeghdUG';
     const SECRET_PASS = 'laminar2026';
 
@@ -173,43 +172,75 @@
           headers: { 'X-Master-Key': API_KEY }
         });
         const data = await res.json();
-        document.getElementById('nickelodeon').innerText = data.record.nickelodeon;
-        document.getElementById('disney').innerText = data.record.disney;
-        document.getElementById('boing').innerText = data.record.boing;
-      } catch (e) { console.log("Error cargando datos"); }
+        // Importante: JSONBin v3 devuelve los datos dentro de .record
+        if (data.record) {
+          document.getElementById('nickelodeon').innerText = data.record.nickelodeon || 0;
+          document.getElementById('disney').innerText = data.record.disney || 0;
+          document.getElementById('boing').innerText = data.record.boing || 0;
+        }
+      } catch (e) { 
+        console.error("Error cargando datos:", e); 
+      }
     }
 
     async function updateScore(team, points) {
+      // 1. Obtenemos valores actuales
       const scores = {
-        nickelodeon: parseInt(document.getElementById('nickelodeon').innerText),
-        disney: parseInt(document.getElementById('disney').innerText),
-        boing: parseInt(document.getElementById('boing').innerText)
+        nickelodeon: parseInt(document.getElementById('nickelodeon').innerText) || 0,
+        disney: parseInt(document.getElementById('disney').innerText) || 0,
+        boing: parseInt(document.getElementById('boing').innerText) || 0
       };
 
+      // 2. Modificamos el equipo correspondiente
       scores[team] += points;
+      
+      // 3. Actualización visual instantánea (Optimistic UI)
       document.getElementById(team).innerText = scores[team];
 
-      await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-        body: JSON.stringify(scores)
-      });
+      // 4. Guardado en la nube
+      try {
+        const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+          method: 'PUT',
+          headers: { 
+            'Content-Type': 'application/json', 
+            'X-Master-Key': API_KEY,
+            'X-Bin-Versioning': 'false' // Evita crear mil versiones del bin
+          },
+          body: JSON.stringify(scores)
+        });
+        
+        if (!res.ok) throw new Error("Fallo en la respuesta de red");
+        console.log("Puntuación guardada correctamente");
+      } catch (e) {
+        console.error("Error al guardar:", e);
+        alert("Error al guardar en la base de datos. Revisa la consola.");
+      }
     }
 
     async function resetScores() {
       if(confirm("¿Seguro que quieres resetear los puntos?")) {
         const resetData = { nickelodeon: 0, disney: 0, boing: 0 };
-        await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'X-Master-Key': API_KEY },
-          body: JSON.stringify(resetData)
-        });
-        loadScores();
+        try {
+          await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+            method: 'PUT',
+            headers: { 
+              'Content-Type': 'application/json', 
+              'X-Master-Key': API_KEY,
+              'X-Bin-Versioning': 'false'
+            },
+            body: JSON.stringify(resetData)
+          });
+          loadScores();
+        } catch (e) {
+          console.error("Error en reset:", e);
+        }
       }
     }
 
-    setInterval(loadScores, 5000);
+    // Carga inicial
     loadScores();
+    // Auto-actualización cada 10 segundos para no saturar la API gratuita
+    setInterval(loadScores, 10000);
   </script>
 </body>
 </html>
