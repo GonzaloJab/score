@@ -214,7 +214,7 @@
 
   <script>
     const BIN_ID = '69a696fe43b1c97be9ae6a03'; // Tu BIN ID
-    const API_KEY = '$2a$10$2pn4Eg1A.geyU64ug/kX4O2iAhPUcsdujbMVEMkeZI75kELeghdUG'; // Tu MASTER KEY
+    const API_KEY = '$2a$10$3pf9.VUX13lsbWM/LvBJl.TEttgbKr2Jyz35CM45O6iRXvfToOWg6'; // Tu MASTER KEY
     const SECRET = 'laminar2026';
     
     const days = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"];
@@ -298,9 +298,12 @@
           },
           body: JSON.stringify({ teams: db })
         });
-        if (!res.ok) throw new Error('Error al guardar: ' + res.status);
+        if (!res.ok) {
+          if (res.status === 401) throw new Error('401: Clave API incorrecta o sin permiso de escritura. Usa la Master Key de https://jsonbin.io/app/api-keys');
+          throw new Error('Error al guardar: ' + res.status);
+        }
       } catch (e) {
-        console.error("No se pudo guardar en JSONBin (¿abriste el archivo con file://? Usa un servidor local):", e);
+        console.error("No se pudo guardar en JSONBin:", e.message || e);
       }
     }
 
