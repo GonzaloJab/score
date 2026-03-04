@@ -10,7 +10,7 @@
       --nickelodeon: #fab77d;
       --disney: #8492a0;
       --boing: #76cdfc;
-    }Okayokay, 
+    } 
 
     body {
       background: #80ced6;
@@ -83,8 +83,8 @@
       margin: 10px 0;
     }
 
-    /* Tabla: columnas iguales (días y total) */
-    .scores-table-wrapper { width: 95%; max-width: 1400px; margin: 0 20px; }
+    /* Tabla: se adapta al contenido, sin espacio vacío a la derecha */
+    .scores-table-wrapper { width: fit-content; max-width: 95%; margin: 0 20px; box-sizing: border-box; }
     table {
       background: white;
       border-collapse: collapse;
@@ -92,14 +92,17 @@
       border-radius: 15px;
       overflow: hidden;
       box-shadow: 10px 10px 0 rgba(0,0,0,0.1);
-      width: 100%;
-      table-layout: fixed;
+      width: max-content;
+      table-layout: auto;
     }
-    th, td { padding: 10px; text-align: center; font-weight: bold; }
+    th, td { padding: 10px 12px; text-align: center; font-weight: bold; box-sizing: border-box; }
     th { background: #333; color: white; font-size: 0.9rem; }
-    /* Columnas iguales (primera columna sin ancho fijo), cada subcolumna de día igual */
-    table col.day-col { width: 4%; }
-    table col.total-col { width: 8%; }
+    /* Mínimos para que no se solape EQUIPO y se lean bien los números */
+    table col.equipo-col { min-width: 85px; }
+    table col.day-col { min-width: 42px; }
+    table col.total-col { min-width: 52px; }
+    table td:first-child,
+    table th:first-child { white-space: nowrap; }
 
     .team-header { font-size: 1.1rem; text-transform: uppercase; }
     .row-nickelodeon { background: var(--nickelodeon); color: #333; }
@@ -159,7 +162,7 @@
       <option value="Jueves">Jueves</option>
       <option value="Viernes">Viernes</option>
       <option value="Sabado">Sábado</option>
-      <option value="Domingo">Domingo</option>
+      <option value="Otros">OTROS</option>
     </select>
 
     <select id="selectActivity">
@@ -183,6 +186,7 @@
       <col class="day-col"><col class="day-col"><col class="day-col">
       <col class="day-col"><col class="day-col"><col class="day-col">
       <col class="day-col"><col class="day-col"><col class="day-col">
+      <col class="day-col"><col class="day-col">
       <col class="total-col">
     </colgroup>
     <thead>
@@ -194,17 +198,17 @@
         <th colspan="3">JUEVES</th>
         <th colspan="3">VIERNES</th>
         <th colspan="3">SÁBADO</th>
-        <th colspan="3">DOMINGO</th>
+        <th colspan="2">OTROS</th>
         <th rowspan="2">TOTAL</th>
       </tr>
       <tr>
-        <th>Game</th><th>Part.</th><th>Pel.</th>
-        <th>Game</th><th>Part.</th><th>Pel.</th>
-        <th>GAme</th><th>Part.</th><th>Pel.</th>
-        <th>Game</th><th>Part.</th><th>Pel.</th>
-        <th>Game</th><th>Part.</th><th>Pel.</th>
-        <th>Game</th><th>Part.</th><th>Pel.</th>
-        <th>Game</th><th>Part.</th><th>Pel.</th>
+        <th>Petanca</th><th>Part.</th><th>Pel.</th>
+        <th>Quiz</th><th>Part.</th><th>Pel.</th>
+        <th>Cluedo</th><th>Part.</th><th>Pel.</th>
+        <th>Bolos</th><th>Part.</th><th>Pel.</th>
+        <th>R&M</th><th>Part.</th><th>Pel.</th>
+        <th>Padel</th><th>Part.</th><th>Pel.</th>
+        <th>Asesino</th><th>Casino</th>
       </tr>
     </thead>
     <tbody id="tableBody">
@@ -217,7 +221,7 @@
     const API_KEY = '$2a$10$3pf9.VUX13lsbWM/LvBJl.TEttgbKr2Jyz35CM45O6iRXvfToOWg6'; // Tu MASTER KEY
     const SECRET = 'laminar2026';
     
-    const days = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"];
+    const days = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Otros"];
     const teams = ["nickelodeon", "disney", "boing"];
 
     function getDefaultDb() {
@@ -225,7 +229,11 @@
       teams.forEach(t => {
         db[t] = {};
         days.forEach(d => {
-          db[t][d] = [0, 0, 0]; // [actividad principal, participación, pelotita]
+          if (d === 'Otros') {
+            db[t][d] = [0, 0]; // [Asesino, Casino]
+          } else {
+            db[t][d] = [0, 0, 0]; // [Game, Part., Pel.]
+          }
         });
       });
       return db;
@@ -238,6 +246,24 @@
       document.getElementById('adminPanel').style.display = 'flex';
     }
 
+    const selectDay = document.getElementById('selectDay');
+    const selectActivity = document.getElementById('selectActivity');
+    const dayOptions = [
+      { value: '0', text: 'Actividad Principal' },
+      { value: '1', text: 'Participación' },
+      { value: '2', text: 'Pelotita' }
+    ];
+    const otrosOptions = [
+      { value: '0', text: 'Asesino' },
+      { value: '1', text: 'Casino' }
+    ];
+    function updateActivityOptions() {
+      const isOtros = selectDay.value === 'Otros';
+      const opts = isOtros ? otrosOptions : dayOptions;
+      selectActivity.innerHTML = opts.map(o => `<option value="${o.value}">${o.text}</option>`).join('');
+    }
+    selectDay.addEventListener('change', updateActivityOptions);
+
     async function fetchData() {
       try {
         const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
@@ -247,6 +273,14 @@
         const json = await res.json();
         if (json.record && json.record.teams) {
           db = json.record.teams;
+          teams.forEach(t => {
+            if (!db[t]) db[t] = {};
+            if (!db[t].Otros || !Array.isArray(db[t].Otros)) {
+              db[t].Otros = [0, 0];
+            } else if (db[t].Otros.length > 2) {
+              db[t].Otros = [db[t].Otros[0] || 0, db[t].Otros[1] || 0];
+            }
+          });
         }
         renderTable();
       } catch (e) {
@@ -264,10 +298,15 @@
         html += `<tr class="row-${t}"><td class="team-header">${teamLabel}</td>`;
 
         days.forEach(d => {
-          const scores = (db[t] && db[t][d]) ? db[t][d] : [0, 0, 0];
+          const raw = (db[t] && db[t][d]) ? db[t][d] : (d === 'Otros' ? [0, 0] : [0, 0, 0]);
+          const scores = d === 'Otros' ? [raw[0] || 0, raw[1] || 0] : [raw[0] || 0, raw[1] || 0, raw[2] || 0];
           const sumDay = scores.reduce((a, b) => a + b, 0);
           total += sumDay;
-          html += `<td>${scores[0]}</td><td>${scores[1]}</td><td>${scores[2]}</td>`;
+          if (d === 'Otros') {
+            html += `<td>${scores[0]}</td><td>${scores[1]}</td>`;
+          } else {
+            html += `<td>${scores[0]}</td><td>${scores[1]}</td><td>${scores[2]}</td>`;
+          }
         });
 
         html += `<td class="total-cell">${total}</td></tr>`;
@@ -283,9 +322,21 @@
     async function changePoints(val) {
       const team = document.getElementById('selectTeam').value;
       const day = document.getElementById('selectDay').value;
-      const activityIdx = document.getElementById('selectActivity').value;
+      const activityIdx = parseInt(document.getElementById('selectActivity').value, 10);
 
-      db[team][day][activityIdx] += val;
+      if (!db[team][day]) {
+        db[team][day] = day === 'Otros' ? [0, 0] : [0, 0, 0];
+      }
+      const arr = db[team][day];
+      if (day === 'Otros') {
+        if (activityIdx < 0 || activityIdx > 1) return;
+        arr[activityIdx] = (arr[activityIdx] || 0) + val;
+        if (arr[activityIdx] < 0) arr[activityIdx] = 0;
+      } else {
+        if (activityIdx < 0 || activityIdx > 2) return;
+        arr[activityIdx] = (arr[activityIdx] || 0) + val;
+        if (arr[activityIdx] < 0) arr[activityIdx] = 0;
+      }
       renderTable();
 
       try {
